@@ -1,0 +1,27 @@
+{
+  "name": "adf_markdown",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@atlaskit/adf-schema": "^49.0.6",
+    "@atlaskit/editor-json-transformer": "^8.24.4",
+    "@atlaskit/editor-markdown-transformer": "^5.16.1",
+    "@tiptap/static-renderer": "^3.0.7",
+    "markdown-it": "^14.1.0",
+    "prosemirror-markdown": "^1.13.2"
+  }
+}
