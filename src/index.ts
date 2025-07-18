@@ -3,8 +3,8 @@ import { JSONTransformer } from "@atlaskit/editor-json-transformer";
 import { MarkdownTransformer } from "@atlaskit/editor-markdown-transformer";
 import { renderToMarkdown } from "@tiptap/static-renderer";
 import {
-    defaultMarkdownSerializer,
-    MarkdownSerializer,
+  defaultMarkdownSerializer,
+  MarkdownSerializer,
 } from "prosemirror-markdown";
 
 const jsonTransformer = new JSONTransformer();
@@ -168,60 +168,88 @@ const adfContent = `
 
   `;
 
-const adfDocument = jsonTransformer.encode(
-    markdownTransformer.parse(markdownText) as any,
+// Utility to add underline mark for ++...++ syntax if not handled by transformer
+function addUnderlineMarkForPlusSyntax(adfNode: any): any {
+  if (Array.isArray(adfNode)) {
+    return adfNode.map(addUnderlineMarkForPlusSyntax);
+  }
+  if (adfNode && typeof adfNode === "object") {
+    if (adfNode.type === "text" && typeof adfNode.text === "string") {
+      const match = adfNode.text.match(/^\+\+(.*?)\+\+$/);
+      if (match) {
+        adfNode.text = match[1];
+        adfNode.marks = [...(adfNode.marks || []), { type: "underline" }];
+      }
+    }
+    for (const key in adfNode) {
+      adfNode[key] = addUnderlineMarkForPlusSyntax(adfNode[key]);
+    }
+  }
+  return adfNode;
+}
+
+// Preprocess markdown to replace <u>...</u> with ++...++
+const preprocessedMarkdownText = markdownText.replace(
+  /<u>(.*?)<\/u>/g,
+  "++$1++"
 );
+
+// Parse and convert underline marks
+let adfDocument = jsonTransformer.encode(
+  markdownTransformer.parse(preprocessedMarkdownText) as any
+);
+adfDocument = addUnderlineMarkForPlusSyntax(adfDocument);
 
 console.dir(adfDocument, { depth: null, colors: true });
 
 const defaultSerializer = defaultMarkdownSerializer;
 const markdownSerializer = new MarkdownSerializer(
-    {
-        ...defaultSerializer.nodes,
-        bulletList: defaultSerializer.nodes.bullet_list,
-        orderedList: defaultSerializer.nodes.ordered_list,
-        listItem: defaultSerializer.nodes.list_item,
+  {
+    ...defaultSerializer.nodes,
+    bulletList: defaultSerializer.nodes.bullet_list,
+    orderedList: defaultSerializer.nodes.ordered_list,
+    listItem: defaultSerializer.nodes.list_item,
+  },
+  {
+    ...defaultSerializer.marks,
+    underline: {
+      open: "<u>",
+      close: "</u>",
     },
-    {
-        ...defaultSerializer.marks,
-        underline: {
-            open: "<u>",
-            close: "</u>",
-        },
-        strike: {
-            open: "~~",
-            close: "~~",
-            expelEnclosingWhitespace: true,
-        },
+    strike: {
+      open: "~~",
+      close: "~~",
+      expelEnclosingWhitespace: true,
     },
+  }
 );
 
 const markdownDocument = markdownSerializer.serialize(
-    jsonTransformer.parse(JSON.parse(adfContent)) as any,
+  jsonTransformer.parse(JSON.parse(adfContent)) as any
 );
 
 const tipTapMarkdown = renderToMarkdown({
-    extensions: [],
-    content: jsonTransformer.parse(JSON.parse(adfContent)) as any,
-    options: {
-        markMapping: {
-            strong({ children }) {
-                return `**${children}**`;
-            },
-            em({ children }) {
-                return `*${children}*`;
-            },
-            link({ children, mark, node, parent }) {
-                return `[${children}](${mark.attrs.href})`;
-            },
-            underline({ children }) {
-                return `<u>${children}</u>`;
-            },
-            strike({ children }) {
-                return `~~${children}~~`;
-            },
-        },
+  extensions: [],
+  content: jsonTransformer.parse(JSON.parse(adfContent)) as any,
+  options: {
+    markMapping: {
+      strong({ children }) {
+        return `**${children}**`;
+      },
+      em({ children }) {
+        return `*${children}*`;
+      },
+      link({ children, mark, node, parent }) {
+        return `[${children}](${mark.attrs.href})`;
+      },
+      underline({ children }) {
+        return `<u>${children}</u>`;
+      },
+      strike({ children }) {
+        return `~~${children}~~`;
+      },
     },
+  },
 });
 
 console.group("Prosemirror Markdown");
